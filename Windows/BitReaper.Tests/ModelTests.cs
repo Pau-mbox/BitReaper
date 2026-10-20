@@ -295,4 +295,15 @@ public class DeleterTests
         var results = Deleter.Delete(new[] { ghost }, DeleteMode.RecycleBin, IntPtr.Zero, _ => { });
         Assert.Equal(DeleteResultKind.Removed, results[0].Kind);
     }
+
+    [Theory]
+    [InlineData(true, null, null, true)]      // its $I record was found
+    [InlineData(false, 4L, 5L, true)]         // no record, but the bin gained an item
+    [InlineData(false, 4L, 4L, false)]        // the bin didn't change: Windows deleted it outright
+    [InlineData(false, null, null, false)]    // no Recycle Bin on the drive (removable, network)
+    [InlineData(false, 4L, null, false)]      // unknown afterwards: never claim it's recoverable
+    public void OnlyItemsShownToBeInTheBinCountAsRecycled(bool foundRecord, long? before, long? after, bool expected)
+    {
+        Assert.Equal(expected, RecycleBin.WentToBin(foundRecord, before, after));
+    }
 }

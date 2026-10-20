@@ -14,7 +14,11 @@ public sealed class DeletionOutcome
     public required int Count { get; init; }
     public required long Bytes { get; init; }
     public required int FailureCount { get; init; }
+    /// <summary>Items Windows deleted permanently although the Recycle Bin was asked for.</summary>
+    public int PermanentCount { get; init; }
     public required List<RecycleRecord> Records { get; init; }
+
+    public int RecycledCount => Mode == DeleteMode.RecycleBin ? Count - PermanentCount : 0;
 
     public bool CanUndo => Mode == DeleteMode.RecycleBin && Records.Count > 0;
 }
@@ -538,6 +542,7 @@ public sealed class ScanSession
         var failures = new List<DeletionFailure>();
         var records = new List<DeletionOutcome.RecycleRecord>();
         var removed = new List<FileNode>();
+        int permanent = 0;
         long bytes = 0;
         for (int i = 0; i < items.Count; i++)
         {
@@ -547,6 +552,7 @@ public sealed class ScanSession
                 failures.Add(new DeletionFailure(item.Path, result.Reason ?? "Unknown error."));
                 continue;
             }
+            if (result.Kind == DeleteResultKind.RemovedInsteadOfRecycled) permanent++;
             string parentPath = item.Node.Parent?.Path ?? "";
             bytes += item.Node.Size;
             item.Node.DetachFromParent();
@@ -557,7 +563,8 @@ public sealed class ScanSession
         Deletion = DeletionPhase.IdlePhase;
         LastOutcome = new DeletionOutcome
         {
-            Mode = mode, Count = removed.Count, Bytes = bytes, FailureCount = failures.Count, Records = records,
+            Mode = mode, Count = removed.Count, Bytes = bytes, FailureCount = failures.Count, PermanentCount = permanent,
+            Records = records,
         };
         if (failures.Count > 0) FailureReport = failures;
         TreeDidChange(SessionChange.Deletion | SessionChange.Outcome);

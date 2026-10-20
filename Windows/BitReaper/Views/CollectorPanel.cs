@@ -184,12 +184,18 @@ public sealed class CollectorPanel : Grid
     {
         bool ok = outcome.FailureCount == 0;
         yield return Ui.Glyph(ok ? Ui.GlyphCompleted : Ui.GlyphWarning, 22, ok ? Theme.Mint : Theme.Orange).WithGlow(ok ? Theme.Mint : Theme.Orange, 5);
-        string title = outcome.Mode == DeleteMode.RecycleBin
-            ? $"Moved {Ui.Plural(outcome.Count, "item")} to the Recycle Bin · {ByteFormat.Size(outcome.Bytes)}"
-            : $"Reaped {Ui.Plural(outcome.Count, "item")} · freed {ByteFormat.Size(outcome.Bytes)}";
+        int recycled = outcome.RecycledCount;
+        int permanent = outcome.PermanentCount;
+        string title = outcome.Mode != DeleteMode.RecycleBin || recycled == 0
+            ? $"Reaped {Ui.Plural(outcome.Count, "item")} · freed {ByteFormat.Size(outcome.Bytes)}"
+            : permanent == 0
+                ? $"Moved {Ui.Plural(outcome.Count, "item")} to the Recycle Bin · {ByteFormat.Size(outcome.Bytes)}"
+                : $"Moved {Ui.Plural(recycled, "item")} to the Recycle Bin, deleted {permanent} permanently · {ByteFormat.Size(outcome.Bytes)}";
         string detail = outcome.FailureCount > 0
             ? $"{Ui.Plural(outcome.FailureCount, "item")} couldn't be deleted."
-            : outcome.Mode == DeleteMode.RecycleBin ? "Empty the Recycle Bin to reclaim the space." : "The space is available right away.";
+            : permanent > 0
+                ? $"{(permanent == 1 ? "One item" : $"{permanent} items")} couldn't go to the Recycle Bin (removable or network drive, or too big), so Windows deleted {(permanent == 1 ? "it" : "them")} for good."
+                : outcome.Mode == DeleteMode.RecycleBin ? "Empty the Recycle Bin to reclaim the space." : "The space is available right away.";
         yield return Ui.Column(2, Ui.Display(title, 15, bold: true), Ui.Secondary(detail, 12, wrap: false));
     }
 
@@ -197,7 +203,7 @@ public sealed class CollectorPanel : Grid
     {
         if (outcome.CanUndo)
             yield return Ui.Button(Ui.Label(Ui.GlyphUndo, "Put Back", 12), compact: true, click: _session.UndoLastDeletion, tip: "Restore from the Recycle Bin (Ctrl+Z)");
-        if (outcome.Mode == DeleteMode.RecycleBin)
+        if (outcome.RecycledCount > 0)
             yield return Ui.Button("Open Recycle Bin", Ui.Kind.Ghost, compact: true, click: ShellActions.OpenRecycleBin);
         yield return Ui.GlyphButton(Ui.GlyphClose, _session.DismissOutcome, "Dismiss", 11);
     }
