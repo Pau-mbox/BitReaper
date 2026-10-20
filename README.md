@@ -100,8 +100,9 @@ A universal app for Apple Silicon and Intel Macs, macOS 14 or later. See all ver
 
 <a href="https://github.com/Pau-mbox/BitReaper/releases/latest/download/BitReaper-Windows-x64.zip"><img src="https://img.shields.io/badge/Download-BitReaper%20for%20Windows-2f8bff?style=for-the-badge&logo=windows&logoColor=white" alt="Download BitReaper for Windows"></a>
 
-One self-contained `BitReaper.exe` for Windows 10 and 11, nothing else to install. On Windows on ARM, take
-`BitReaper-Windows-arm64.zip` from the [Releases page](https://github.com/Pau-mbox/BitReaper/releases).
+One self-contained `BitReaper.exe` for Windows 10 and 11, nothing else to install. On Windows on ARM, download
+[`BitReaper-Windows-arm64.zip`](https://github.com/Pau-mbox/BitReaper/releases/latest/download/BitReaper-Windows-arm64.zip)
+instead. See all versions on the [Releases page](https://github.com/Pau-mbox/BitReaper/releases).
 
 1. Unzip it and run `BitReaper.exe`. It isn't code-signed yet, so the first time SmartScreen says
    "Windows protected your PC": click **More info**, then **Run anyway**.

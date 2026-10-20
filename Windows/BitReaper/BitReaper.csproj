@@ -11,7 +11,7 @@
     <RootNamespace>BitReaper</RootNamespace>
     <ApplicationIcon>Assets\BitReaper.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>BitReaper</Product>
     <Description>A synthwave disk-space analyzer: fast tree view, drag-and-drop collector, bulk delete.</Description>
     <Company>The BitReaper contributors</Company>
