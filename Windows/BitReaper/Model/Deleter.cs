@@ -8,6 +8,8 @@ public enum DeleteResultKind
 {
     Removed,
     Recycled,
+    /// <summary>Recycling was asked for, but Windows deleted the item permanently (after its own warning).</summary>
+    RemovedInsteadOfRecycled,
     Failed,
 }
 
@@ -55,6 +57,8 @@ public static class Deleter
             return DeleteResult.Failed("The path is too long for the Recycle Bin. Use Delete Immediately instead.");
 
         var started = System.DateTime.UtcNow;
+        string? root = System.IO.Path.GetPathRoot(path);
+        long? itemsBefore = root == null ? null : RecycleBin.ItemCount(root);
         var operation = new Native.SHFILEOPSTRUCT
         {
             hwnd = owner,
@@ -67,7 +71,14 @@ public static class Deleter
         if (operation.fAnyOperationsAborted != 0) return DeleteResult.Failed("Cancelled.");
         if (code != 0) return DeleteResult.Failed(DescribeShellError(code));
         if (Exists(path)) return DeleteResult.Failed("Windows couldn't move the item to the Recycle Bin.");
-        return new DeleteResult(DeleteResultKind.Recycled, RecycleBin.Find(path, started));
+
+        // Windows destroys an item instead, once the user accepts its warning, when it can't go to the
+        // Recycle Bin: removable and network drives, items too big for the bin, bins set to delete at once.
+        var record = RecycleBin.Find(path, started);
+        long? itemsAfter = root == null ? null : RecycleBin.ItemCount(root);
+        return RecycleBin.WentToBin(record != null, itemsBefore, itemsAfter)
+            ? new DeleteResult(DeleteResultKind.Recycled, record)
+            : new DeleteResult(DeleteResultKind.RemovedInsteadOfRecycled);
     }
 
     // ---- Permanent ----
@@ -215,6 +226,21 @@ public static class RecycleBin
         try { File.Delete(item.InfoPath); }
         catch (Exception) { /* a stale record only shows as a broken entry in the Recycle Bin */ }
     }
+
+    /// <summary>Items in the Recycle Bin of the drive holding <paramref name="root"/>, or null when unknown.</summary>
+    public static long? ItemCount(string root)
+    {
+        var info = new Native.SHQUERYRBINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Native.SHQUERYRBINFO>() };
+        return Native.SHQueryRecycleBin(root, ref info) == 0 ? info.i64NumItems : null;
+    }
+
+    /// <summary>
+    /// Whether a successful shell delete really put the item in the Recycle Bin: its record was found, or the
+    /// bin gained an item. When neither can be shown, the item is reported as deleted permanently, never as
+    /// recoverable when it may not be.
+    /// </summary>
+    internal static bool WentToBin(bool foundRecord, long? itemsBefore, long? itemsAfter) =>
+        foundRecord || (itemsBefore is { } before && itemsAfter is { } after && after > before);
 
     /// <summary>Bytes in the Recycle Bin of the drive holding <paramref name="root"/>, or null when unknown.</summary>
     public static long? Size(string root)
